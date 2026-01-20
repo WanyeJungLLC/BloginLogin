@@ -8,6 +8,7 @@ A modern, open-source portfolio blog application built with React and Express. C
 - [Quick Start](#quick-start)
 - [Default Admin Credentials](#default-admin-credentials)
 - [Changing Your Credentials](#changing-your-credentials)
+- [Security Setup](#security-setup)
 - [Project Structure](#project-structure)
 - [Technology Stack](#technology-stack)
 - [Configuration](#configuration)
@@ -85,6 +86,200 @@ After logging in with the default credentials:
 5. Click **Update** to save changes
 
 See [docs/user-guide.md](docs/user-guide.md) for detailed instructions.
+
+## Security Setup
+
+**BloginLogin is designed for quick rebuilds and customizations.** The default admin credentials are **fake placeholders** used only to bootstrap the application during development. They **must be changed immediately** after first login.
+
+### Admin Account Creation Behavior
+
+The application handles admin account creation differently based on environment:
+
+#### Development Mode (`NODE_ENV=development`)
+- **Default admin is auto-created** if no admin exists in the database
+- Uses environment variables or falls back to defaults:
+  - Username: `John Stamos`
+  - Password: `1sR3aLLyAcL0n3!`
+  - Email: `change-me@example.com`
+- **Change these immediately after first login!**
+
+#### Production Mode (default)
+- **Admin will NOT be auto-created** unless you explicitly set:
+  - `ADMIN_USERNAME`
+  - `ADMIN_PASSWORD`
+  - `ADMIN_EMAIL`
+- If these are not set, you'll need to manually create an admin in the database
+
+#### Best Practice
+Set `ADMIN_*` environment variables **before first run**, then log in and change your credentials immediately through the UI.
+
+### First-Time Credential Change (UI)
+
+After logging in with initial credentials:
+
+1. **Navigate to Admin Login**: Go to `/admin/login` and sign in
+2. **Open Admin Settings**: Click the Settings icon or go to `/admin/settings`
+3. **Change Username and Recovery Email**:
+   - Enter your new username
+   - Enter a real recovery email address
+   - Enter your current password to confirm
+   - Click **Update Credentials**
+4. **Change Password** (minimum 8 characters):
+   - Enter your current password
+   - Enter your new password
+   - Confirm your new password
+   - Click **Update Password**
+
+### First-Time Credential Change (API)
+
+You can also change credentials programmatically using the API:
+
+#### Change Password
+```bash
+POST /api/auth/change-password
+Content-Type: application/json
+Cookie: blog_session=YOUR_SESSION
+
+{
+  "currentPassword": "your-current-password",
+  "newPassword": "your-new-strong-password"
+}
+```
+
+**Requirements**: Valid session cookie, minimum 8 characters for new password
+
+#### Change Username/Email
+```bash
+POST /api/auth/change-credentials
+Content-Type: application/json
+Cookie: blog_session=YOUR_SESSION
+
+{
+  "password": "your-current-password",
+  "newUsername": "newusername",
+  "newEmail": "you@example.com"
+}
+```
+
+**Requirements**: Valid session cookie, current password for verification
+
+**Note**: All routes require authentication via session cookie. Passwords are hashed with bcrypt (12 rounds).
+
+### Password Reset (Temporary Workflow)
+
+While email is not yet configured, password reset works through server logs:
+
+1. **Request Password Reset**:
+   ```bash
+   POST /api/auth/request-password-reset
+   Content-Type: application/json
+   
+   {
+     "email": "your-recovery-email@example.com"
+   }
+   ```
+
+2. **Get Token from Server Logs**: The reset token will be logged to the server console:
+   ```
+   Password reset token for you@example.com: abc123...
+   ```
+
+3. **Reset Password**:
+   ```bash
+   POST /api/auth/reset-password
+   Content-Type: application/json
+   
+   {
+     "token": "token-from-server-log",
+     "newPassword": "your-new-strong-password"
+   }
+   ```
+
+### Database Hardening
+
+**Do not use the example DATABASE_URL in production!** Follow these security practices:
+
+#### Create Unique Database with Strong Credentials
+
+```sql
+-- Create a dedicated user with a strong password
+CREATE USER bloginlogin_app WITH PASSWORD 'use-a-strong-random-password-here';
+
+-- Create a dedicated database
+CREATE DATABASE bloginlogin_prod;
+
+-- Grant least-privilege access
+GRANT ALL PRIVILEGES ON DATABASE bloginlogin_prod TO bloginlogin_app;
+```
+
+#### Enable SSL for Remote Databases
+
+If using a remote database, require SSL connections:
+
+```bash
+DATABASE_URL=postgresql://bloginlogin_app:strong-password@your-db-host:5432/bloginlogin_prod?sslmode=require
+```
+
+#### Security Best Practices
+
+- **Avoid exposing PostgreSQL port publicly**: Keep it internal to your Docker network or private network
+- **Use strong, unique passwords**: Generate with a password manager (32+ random characters)
+- **Rotate credentials regularly**: Update database passwords periodically
+- **Store secrets securely**: Use Replit Secrets, AWS Secrets Manager, or your platform's secret management system
+- **Never commit credentials**: Keep `.env` files out of version control (already in `.gitignore`)
+
+### Session/Cookie Security
+
+- **HTTP-only cookies**: Session cookies cannot be accessed by JavaScript (prevents XSS attacks)
+- **Secure flag in production**: Cookies are only sent over HTTPS in production mode
+- **7-day session expiry**: Sessions automatically expire after 7 days
+- **Deploy behind HTTPS**: Always use HTTPS in production to protect session cookies
+
+**Recommended**: Add rate limiting to `/api/auth/login` to prevent brute-force attacks. Consider using `express-rate-limit` or similar middleware.
+
+### File Storage Guidance
+
+#### Local Uploads (`STORAGE_PROVIDER=local`)
+- Files are served from `/uploads` directory
+- **Use only for public assets** (blog images, portfolio screenshots)
+- All uploaded files are publicly accessible at `/uploads/filename`
+
+#### Protected Assets
+For files that require authentication:
+- Use **Replit Object Storage** with ACLs
+- Implement authentication checks on `GET /objects` requests
+- Configure access rules in `storage.rules`
+
+### Go-Live Checklist
+
+Before deploying to production, ensure you complete these security steps:
+
+- [ ] **Set unique admin credentials**:
+  - [ ] Set `ADMIN_USERNAME` to a non-default value
+  - [ ] Set `ADMIN_PASSWORD` to a strong password (min 8 chars, use passphrase)
+  - [ ] Set `ADMIN_EMAIL` to your real email address
+  
+- [ ] **Change credentials after first login**:
+  - [ ] Log in to `/admin/login`
+  - [ ] Navigate to `/admin/settings`
+  - [ ] Change Username to your preferred value
+  - [ ] Change Password to a strong, unique password
+  - [ ] Update Recovery Email to your real email
+  
+- [ ] **Harden database**:
+  - [ ] Replace `DATABASE_URL` with unique database name
+  - [ ] Use strong credentials (32+ char random password)
+  - [ ] Enable SSL (`?sslmode=require` for remote databases)
+  - [ ] Ensure PostgreSQL port is not publicly exposed
+  
+- [ ] **Ensure HTTPS deployment**:
+  - [ ] Verify site is served over HTTPS
+  - [ ] Check that Secure cookie flag is enabled (automatic in production)
+  
+- [ ] **Review storage strategy**:
+  - [ ] Set appropriate storage provider (`local` or Replit Object Storage)
+  - [ ] Configure access rules for protected content if needed
+  - [ ] Verify upload directory permissions (if using local storage)
 
 ## Project Structure
 

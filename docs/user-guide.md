@@ -71,6 +71,116 @@ The default credentials are public (they're in the documentation). After your fi
 - Mix of letters, numbers, and symbols recommended
 - Don't reuse passwords from other sites
 
+### Changing Credentials via API
+
+You can also change your credentials programmatically using the API. This is useful for automation or custom integrations.
+
+#### Change Password via API
+
+```bash
+curl -X POST http://localhost:5000/api/auth/change-password \
+  -H "Content-Type: application/json" \
+  -b "blog_session=YOUR_SESSION_COOKIE" \
+  -d '{
+    "currentPassword": "your-current-password",
+    "newPassword": "your-new-strong-password"
+  }'
+```
+
+**Response (success)**:
+```json
+{
+  "message": "Password updated successfully"
+}
+```
+
+**Requirements**:
+- Valid session cookie (`blog_session`)
+- Current password must match
+- New password must be at least 8 characters
+
+#### Change Username/Email via API
+
+```bash
+curl -X POST http://localhost:5000/api/auth/change-credentials \
+  -H "Content-Type: application/json" \
+  -b "blog_session=YOUR_SESSION_COOKIE" \
+  -d '{
+    "password": "your-current-password",
+    "newUsername": "newusername",
+    "newEmail": "you@example.com"
+  }'
+```
+
+**Response (success)**:
+```json
+{
+  "message": "Credentials updated successfully"
+}
+```
+
+**Requirements**:
+- Valid session cookie (`blog_session`)
+- Current password for verification
+- At least one of `newUsername` or `newEmail` must be provided
+
+**Note**: To get your session cookie:
+1. Log in via the UI
+2. Open browser DevTools → Application/Storage → Cookies
+3. Copy the value of `blog_session`
+
+### Password Recovery Workflow (Temporary)
+
+While email delivery is not yet configured, password reset uses server logs:
+
+#### Step 1: Request Password Reset
+
+```bash
+curl -X POST http://localhost:5000/api/auth/request-password-reset \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "your-recovery-email@example.com"
+  }'
+```
+
+**Response**:
+```json
+{
+  "message": "If that email exists, a reset link has been sent"
+}
+```
+
+#### Step 2: Get Token from Server Logs
+
+Check your server console/logs for the reset token:
+
+```
+Password reset token for you@example.com: a1b2c3d4e5f6...
+```
+
+#### Step 3: Reset Password with Token
+
+```bash
+curl -X POST http://localhost:5000/api/auth/reset-password \
+  -H "Content-Type: application/json" \
+  -d '{
+    "token": "a1b2c3d4e5f6...",
+    "newPassword": "your-new-strong-password"
+  }'
+```
+
+**Response (success)**:
+```json
+{
+  "message": "Password reset successfully"
+}
+```
+
+**Notes**:
+- Reset tokens expire after 1 hour
+- Each token can only be used once
+- New password must be at least 8 characters
+
 ---
 
 ## Managing Blog Posts
