@@ -45,31 +45,137 @@ The default credentials are public (they're in the documentation). After your fi
 
 ## Changing Your Credentials
 
-### Changing Your Username and Email
+You can change your credentials either through the web UI or via API calls.
 
-1. Log in to the admin dashboard
-2. Click the **Settings** icon (gear) in the top navigation
-3. In the **Account Credentials** section:
-   - Enter your new **Username**
-   - Enter your new **Recovery Email** (used for password reset)
-   - Enter your **Current Password** to confirm
-4. Click **Update Credentials**
+### Changing Your Password (UI)
 
-### Changing Your Password
-
-1. Log in to the admin dashboard
-2. Click the **Settings** icon in the top navigation
+1. **Sign in** to the admin dashboard at `/admin/login`
+2. **Navigate to Admin Settings** at `/admin/settings` (or click the **Settings** icon/gear in the top navigation)
 3. In the **Change Password** section:
    - Enter your **Current Password**
    - Enter your **New Password** (minimum 8 characters)
    - **Confirm** your new password
 4. Click **Update Password**
+5. You'll see a success message confirming the change
+
+### Changing Your Username and Email (UI)
+
+1. **Sign in** to the admin dashboard at `/admin/login`
+2. **Navigate to Admin Settings** at `/admin/settings`
+3. In the **Account Credentials** section:
+   - Enter your new **Username**
+   - Enter your new **Recovery Email** (used for password reset)
+   - Enter your **Current Password** to confirm
+4. Click **Update Credentials**
+5. You'll see a success message confirming the change
+
+### Changing Your Password (API)
+
+If you prefer to use the API or need to automate credential changes:
+
+```bash
+curl -X POST http://localhost:5000/api/auth/change-password \
+  -H "Content-Type: application/json" \
+  -b "blog_session=YOUR_SESSION_COOKIE" \
+  -d '{
+    "currentPassword": "your-current-password",
+    "newPassword": "your-new-strong-password"
+  }'
+```
+
+**Response (Success):**
+```json
+{
+  "message": "Password updated successfully"
+}
+```
+
+### Changing Username/Email (API)
+
+```bash
+curl -X POST http://localhost:5000/api/auth/change-credentials \
+  -H "Content-Type: application/json" \
+  -b "blog_session=YOUR_SESSION_COOKIE" \
+  -d '{
+    "password": "your-current-password",
+    "newUsername": "your-new-username",
+    "newEmail": "your-real-email@example.com"
+  }'
+```
+
+**Response (Success):**
+```json
+{
+  "message": "Credentials updated successfully"
+}
+```
+
+**Notes:**
+- Replace `YOUR_SESSION_COOKIE` with your actual session cookie value from the browser
+- You can get the session cookie from your browser's Developer Tools (Application/Storage → Cookies)
+- The session cookie name is `blog_session`
+- Both API endpoints require authentication (valid session cookie)
+
+### Password Recovery Workflow (Temporary)
+
+While email delivery is not yet configured, you can still reset your password using the API and server logs:
+
+#### Step 1: Request a Password Reset
+
+```bash
+curl -X POST http://localhost:5000/api/auth/request-password-reset \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "your-recovery-email@example.com"
+  }'
+```
+
+**Response:**
+```json
+{
+  "message": "If that email exists, a reset link has been sent"
+}
+```
+
+#### Step 2: Get the Token from Server Logs
+
+Check your server console output for a line like:
+```
+Password reset token for your-recovery-email@example.com: abc123def456...
+```
+
+Copy this token for the next step.
+
+#### Step 3: Reset Your Password
+
+```bash
+curl -X POST http://localhost:5000/api/auth/reset-password \
+  -H "Content-Type: application/json" \
+  -d '{
+    "token": "abc123def456...",
+    "newPassword": "your-new-strong-password"
+  }'
+```
+
+**Response (Success):**
+```json
+{
+  "message": "Password reset successfully"
+}
+```
+
+**Important Notes:**
+- Reset tokens are valid for **1 hour** from creation
+- Each token can only be used **once**
+- Requesting a new reset token invalidates all previous tokens
+- In the future, reset tokens will be sent via email instead of server logs
 
 ### Password Requirements
 
 - Minimum 8 characters
 - Mix of letters, numbers, and symbols recommended
 - Don't reuse passwords from other sites
+- Consider using a passphrase for better security
 
 ---
 
