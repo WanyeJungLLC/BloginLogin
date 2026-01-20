@@ -203,7 +203,8 @@ While email is not yet configured, password reset works through server logs:
 
 ```sql
 -- Create a dedicated user with a strong password
-CREATE USER bloginlogin_app WITH PASSWORD 'use-a-strong-random-password-here';
+-- IMPORTANT: Replace 'YOUR_STRONG_PASSWORD_HERE' with an actual strong password
+CREATE USER bloginlogin_app WITH PASSWORD 'YOUR_STRONG_PASSWORD_HERE';
 
 -- Create a dedicated database
 CREATE DATABASE bloginlogin_prod;
@@ -217,7 +218,7 @@ GRANT ALL PRIVILEGES ON DATABASE bloginlogin_prod TO bloginlogin_app;
 If using a remote database, require SSL connections:
 
 ```bash
-DATABASE_URL=postgresql://bloginlogin_app:strong-password@your-db-host:5432/bloginlogin_prod?sslmode=require
+DATABASE_URL=postgresql://bloginlogin_app:YOUR_STRONG_PASSWORD@your-db-host:5432/bloginlogin_prod?sslmode=require
 ```
 
 #### Security Best Practices

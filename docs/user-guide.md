@@ -75,6 +75,8 @@ The default credentials are public (they're in the documentation). After your fi
 
 You can also change your credentials programmatically using the API. This is useful for automation or custom integrations.
 
+**Note**: The examples below use `http://localhost:5000` for local development. In production, always use HTTPS (e.g., `https://yourdomain.com`).
+
 #### Change Password via API
 
 ```bash
